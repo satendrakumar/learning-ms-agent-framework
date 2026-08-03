@@ -435,9 +435,9 @@ whole talk, and it lets you calibrate depth for the rest of the session.
         ("01", "Why a framework", "The gap between a completion and an agent", ACCENT),
         ("02", "Core concepts", "Clients, agents, sessions, the run lifecycle", ACCENT),
         ("03", "Tools", "Typed functions, the call loop, approvals", CYAN),
-        ("04", "Memory & context", "Sessions, providers, compaction", CYAN),
+        ("04", "Memory & context", "Sessions, providers, persistence, compaction", CYAN),
         ("05", "MCP", "Standardised tool servers", VIOLET),
-        ("06", "Workflows", "Functional, graph, and orchestration patterns", VIOLET),
+        ("06", "Workflows", "Executors, edges, execution, orchestration", VIOLET),
         ("07", "Middleware", "Guardrails and cross-cutting concerns", GREEN),
         ("08", "Production", "Hosting, observability, best practice", GREEN),
     ]
@@ -932,12 +932,12 @@ token-by-token chat front end with no bespoke transport code.
          "uv run python examples/01_hello_agent.py",
          "",
          "# no model needed — good smoke test:",
-         "uv run python examples/07_graph_workflow.py"],
+         "uv run python examples/11_graph_workflow.py"],
         ["The first response is blocking — the whole answer lands at once.",
          "The second passes temperature and max_tokens per call.",
          "The third streams: tokens appear as they are produced.",
          "Edit instructions live and re-run — show the behaviour change."],
-        "Run examples/07_graph_workflow.py — it needs no model at all and still "
+        "Run examples/11_graph_workflow.py — it needs no model at all and still "
         "demonstrates the framework executing. Keep talking while vLLM warms up.")
     d.notes(s, """
 [SETUP]
@@ -1117,7 +1117,7 @@ concurrently and ideally idempotent.
     d.notes(s, """
 [TALK TRACK]
 This is example 02 essentially verbatim. Note that `tools=` accepts a list or a bare tool —
-example 12 passes `tools=get_weather` with no list, and that is fine.
+example 16 passes `tools=get_weather` with no list, and that is fine.
 
 [SUBTLE POINT]
 You do not strictly need the `@tool` decorator — a plain typed function with a docstring
@@ -1221,7 +1221,7 @@ Four minutes.
     # ---- 22 SECTION 4 ----------------------------------------------------------------
     s = d.section("04", "Memory & context",
                   "Three horizons: the turn, the session, and everything before",
-                  ["sessions", "context providers", "stores", "compaction"])
+                  ["sessions", "providers", "persistence", "compaction"])
     d.notes(s, """
 [TALK TRACK]
 Memory is where most agent projects quietly go wrong. Not because it is conceptually hard,
@@ -1383,82 +1383,194 @@ the room says it for you.
 uv run python examples/04_memory.py
 """)
 
-    # ---- 26 Compaction ---------------------------------------------------------------
-    s = d.slide("Compaction: the context window is a budget")
+    # ---- 26 Layering providers -------------------------------------------------------
+    s = d.slide("Providers stack", eyebrow="examples/05_memory_providers.py")
+    d.text(s, ML, 1.78, CW, 0.34,
+           "Same two hooks, different jobs. Order in the list is the order they run.",
+           15, MUTED)
+    layers = [
+        ("InMemoryHistoryProvider", "the transcript", GREEN,
+         "load_messages=True — replays history into every run"),
+        ("Mem0ContextProvider", "semantic memory", VIOLET,
+         "durable facts retrieved across sessions"),
+        ("InMemoryHistoryProvider", "the audit copy", AMBER,
+         "load_messages=False — records, never feeds the model"),
+    ]
+    cy = 2.32
+    for name, role, col, sub in layers:
+        c = d.card(s, ML, cy, 7.2, 0.98)
+        d.rect(s, ML, cy, 0.055, 0.98, col)
+        d.text(s, ML + 0.32, cy + 0.16, 4.4, 0.3, name, 13.5, TEXT, bold=True, font=MONO)
+        d.text(s, ML + 5.1, cy + 0.17, 2.0, 0.28, role, 12, col, bold=True)
+        d.text(s, ML + 0.32, cy + 0.56, 6.6, 0.3, sub, 11.5, MUTED)
+        cy += 1.1
+    d.code(s, ML + 7.5, 2.32, 4.3, [
+        "context_providers=[",
+        "    transcript,",
+        "    agent_memory,",
+        "    audit,   # last",
+        "]",
+    ], size=12)
+    d.text(s, ML + 7.5, 4.3, 4.3, 1.3,
+           "The audit store goes last so store_context_messages=True captures what the "
+           "providers above it injected.", 12.5, MUTED, spacing=1.25)
+    d.callout(s, ML, 5.7, CW, 1.0, "each provider owns a slice of session.state",
+              "Namespaced by source_id, so two providers never collide. In the example the "
+              "transcript holds 4 messages and the audit copy 6 — same run, different jobs.",
+              CYAN)
+    d.notes(s, """
+[TALK TRACK]
+This is the composition payoff from module 2, made concrete. Three providers, one session,
+one set of hooks. Nothing here subclasses Agent.
+
+[READ THE STACK]
+The transcript is what makes the conversation multi-turn — load_messages=True replays it.
+Mem0 adds durable semantic memory that outlives the session. The audit store has
+load_messages=False, so it never feeds the model; it only records.
+
+[WHY ORDER MATTERS]
+Providers run in list order. The audit store is last and sets store_context_messages=True,
+so it captures context the earlier providers injected. Put it first and it would record
+nothing useful. That is the one detail people get wrong.
+
+[THE NUMBERS]
+When you run it, the transcript holds 4 messages and the audit copy holds 6. That gap is
+the injected context, visible. Point at it.
+
+[MEM0 IS OPTIONAL]
+The example skips Mem0 unless MEM0_API_KEY is set, so it runs offline. Say that, or someone
+will assume the whole slide needs a hosted account.
+""")
+
+    # ---- 27 Persistence --------------------------------------------------------------
+    s = d.slide("Persistence: outliving the process",
+                eyebrow="examples/06_persistent_history.py")
+    a = d.card(s, ML, 1.9, 5.6, 2.15, fill=PANEL, line=CYAN)
+    d.rect(s, ML, 1.9, 5.6, 0.055, CYAN)
+    d.text(s, ML + 0.34, 2.14, 4.9, 0.32, "The provider persists", 17, TEXT, bold=True)
+    d.text(s, ML + 0.34, 2.56, 4.9, 0.28, "FileHistoryProvider(path)", 12, CYAN, font=MONO)
+    d.text(s, ML + 0.34, 2.98, 4.9, 1.3,
+           "Append-only file per session. Reuse the session_id and the previous run's "
+           "history is already there.\nRedis and Cosmos providers, same shape.", 12.5,
+           MUTED, spacing=1.25)
+    b = d.card(s, ML + 6.2, 1.9, 5.6, 2.15, fill=PANEL_2, line=GREEN)
+    d.rect(s, ML + 6.2, 1.9, 5.6, 0.055, GREEN)
+    d.text(s, ML + 6.54, 2.14, 4.9, 0.32, "You persist", 17, TEXT, bold=True)
+    d.text(s, ML + 6.54, 2.56, 4.9, 0.28, "session.to_dict()", 12, GREEN, font=MONO)
+    d.text(s, ML + 6.54, 2.98, 4.9, 1.3,
+           "The session is just a dict. Serialise it into whatever store you already "
+           "run, then AgentSession.from_dict() to resume.", 12.5, TEXT, spacing=1.25)
+    d.code(s, ML, 4.34, CW, [
+        "blob = json.dumps(session.to_dict())          # ~530 bytes",
+        "restored = AgentSession.from_dict(json.loads(blob))",
+        "await new_agent.run(\"What is my favourite colour?\", session=restored)",
+    ], size=12.5)
+    d.callout(s, ML, 5.68, CW, 0.95, "the production question this answers",
+              "\"Where do sessions live when the process restarts?\" — pick one of these two "
+              "before you ship, not after.", AMBER)
+    d.notes(s, """
+[TALK TRACK]
+Module 4 opened by saying an in-memory session is fine for a CLI and wrong for a service.
+This is the fix, and there are exactly two shapes.
+
+[LEFT — the provider owns it]
+FileHistoryProvider takes a directory and writes one append-only file per session. Reusing
+the session_id picks up where you left off. Run the example twice and the record count goes
+from 2 to 4 — that is the whole demo.
+
+[HONEST CAVEAT]
+FileHistoryProvider is marked experimental in 1.13 and warns on import. Great for local
+development; for a service use Redis or Cosmos, or option two.
+
+[RIGHT — you own it]
+session.to_dict() gives you a plain dict. Serialise it wherever you already keep state.
+This is usually the right answer for a web service, because you already have somewhere to
+put it and you control the lifecycle and retention.
+
+[PRESENTER TIP]
+The persuasive detail is that the second half of the example builds a brand-new agent
+object and hands it the restored session — and the agent still knows the favourite colour.
+Same conversation, different process.
+""")
+
+    # ---- 28 Compaction ---------------------------------------------------------------
+    s = d.slide("Compaction: choosing what to forget")
     d.text(s, ML, 1.78, CW, 0.34,
            "Long conversations do not fail gracefully. They fail at token limit N+1 — "
            "mid-sentence, in production.", 15, MUTED)
-    stages = [("ToolResultCompaction", "drop stale tool payloads", VIOLET),
-              ("Summarization", "fold old turns into a summary", CYAN),
-              ("SlidingWindow", "keep the last N groups", GREEN)]
-    x = ML
-    for i, (name, sub, col) in enumerate(stages):
-        w = 3.5
-        c = d.card(s, x, 2.42, w, 1.28, fill=PANEL, line=col)
-        d.label(c, [(name, 13.5, TEXT, True), (sub, 11.5, MUTED, False)])
-        if i < 2:
-            d.arrow(s, x + w + 0.06, 2.94, 0.46, 0.26, col)
-        x += w + 0.58
-    d.rect(s, ML, 3.94, CW, 0.42, PANEL_2, radius=0.1,
+    strategies = [
+        ("SlidingWindow", "keep the last N groups", GREEN),
+        ("Truncation", "over N messages? trim to M", GREEN),
+        ("ToolResultCompaction", "summarise old tool groups, keep the trace", VIOLET),
+        ("SelectiveToolCall", "drop old tool groups outright", VIOLET),
+        ("ContextWindow", "derive the budget from the model", CYAN),
+        ("Summarization", "fold old turns into prose (needs a model)", AMBER),
+    ]
+    for i, (name, sub, col) in enumerate(strategies):
+        col_i, row_i = i % 2, i // 2
+        x = ML + col_i * 6.05
+        y = 2.32 + row_i * 0.86
+        d.card(s, x, y, 5.7, 0.72)
+        d.rect(s, x, y, 0.055, 0.72, col)
+        d.text(s, x + 0.3, y + 0.1, 3.0, 0.28, name, 13, TEXT, bold=True, font=MONO)
+        d.text(s, x + 0.3, y + 0.42, 5.1, 0.26, sub, 11.5, MUTED)
+    d.rect(s, ML, 4.98, CW, 0.44, PANEL_2, radius=0.1,
            shape=MSO_SHAPE.ROUNDED_RECTANGLE)
-    d.text(s, ML, 4.0, CW, 0.32, "TokenBudgetComposedStrategy   ·   token_budget=2_000",
-           12.5, CYAN, bold=True, align=PP_ALIGN.CENTER, font=MONO)
-    d.code(s, ML, 4.58, 7.3, [
-        "pipeline = TokenBudgetComposedStrategy(",
-        "    token_budget=2_000, tokenizer=CharacterEstimatorTokenizer(),",
-        "    strategies=[ToolResultCompactionStrategy(keep_last_tool_call_groups=1),",
-        "                SummarizationStrategy(client=cheap_client, target_count=2),",
-        "                SlidingWindowStrategy(keep_last_groups=20)],",
-        ")",
-    ], size=11.5)
-    d.card(s, ML + 7.7, 4.58, 4.1, 1.85, fill=PANEL_2, line=AMBER)
-    d.text(s, ML + 7.98, 4.8, 3.6, 0.3, "USE A CHEAP SUMMARISER", 10.5, AMBER, bold=True)
-    d.text(s, ML + 7.98, 5.18, 3.6, 1.1,
-           "Example 11 points the summariser at a small local model while the agent runs "
-           "on the main one. Summarising is a cheap job.", 12, TEXT, spacing=1.22)
+    d.text(s, ML, 5.06, CW, 0.32,
+           "TokenBudgetComposedStrategy  —  run several, cheapest first, until the budget "
+           "is met", 12.5, CYAN, bold=True, align=PP_ALIGN.CENTER)
+    d.callout(s, ML, 5.66, CW, 1.05, "they are not interchangeable",
+              "Dropping a tool group reclaims more tokens than summarising it — and loses "
+              "the trace. Summarising costs a model call. Example 08 runs all seven side by "
+              "side so you can see the trade in numbers.", AMBER)
     d.notes(s, """
 [TALK TRACK]
-Compaction is the unglamorous feature that decides whether your agent survives a long
-session. Three strategies, composed under a token budget, applied before the model call.
+Seven strategies, one job: decide what to forget. Do not read the list out — group it.
+Two blunt ones, two tool-focused ones, one that does the budget maths for you, and one that
+costs a model call.
 
-[ORDER MATTERS]
-The order in that list is the order they run, and it is deliberate: throw away cheap
-garbage first (stale tool results — often the single biggest consumer), then summarise
-what is left, then hard-window as a backstop. Reversing it means you pay a summariser to
-compress tool output you were going to drop.
+[THE DISTINCTION THAT MATTERS]
+ToolResultCompactionStrategy *replaces* old tool groups with a readable
+"[Tool results: ...]" line — it reclaims the message structure and keeps a trace of what
+the tools returned. SelectiveToolCallCompactionStrategy *excludes* those groups entirely.
+In example 08 on the same transcript that is roughly 2,016 tokens versus 1,714. The second
+saves more and tells you less. Choose deliberately.
 
-[THE SEPARATE CLIENT]
-Example 11 wires a second, cheaper client purely for summarisation — in the repo it points
-at a local Ollama endpoint on port 11434. Flag that as a prerequisite if you plan to run
-this example live.
+[DO NOT OVERSELL]
+Resist saying "tool results are always the biggest win" — it depends entirely on your
+payload sizes. The honest framing is: measure it, which is what example 08 is for.
+
+[COMPOSITION]
+TokenBudgetComposedStrategy runs strategies in order until an included-token budget is
+satisfied. Cheap structural wins first, summarisation later, hard window as a backstop.
 
 [COST ANGLE]
-For architects: compaction is a cost control, not just a correctness control. Every turn
+For architects: compaction is a cost control as much as a correctness control. Every turn
 you do not resend is money.
 
 [WATCH OUT]
-Summarisation loses detail by definition. If your agent needs exact prior values — order
-IDs, amounts — put them in structured session state, not in the transcript you are about
-to summarise.
+Summarisation loses detail by definition. If the agent needs exact prior values — order
+IDs, amounts — keep them in structured session state, not in prose you are about to
+compress.
 """)
 
-    # ---- 27 DEMO 3 -------------------------------------------------------------------
+    # ---- 29 DEMO 3 -------------------------------------------------------------------
     s = d.demo(
-        "Demo — sessions, providers, compaction",
+        "Demo — sessions, providers, persistence, compaction",
         ["uv run python examples/03_multi_turn.py",
-         "uv run python examples/04_memory.py",
+         "uv run python examples/05_memory_providers.py",
+         "uv run python examples/06_persistent_history.py   # run it twice",
          "",
-         "# needs a summariser model on :11434",
-         "uv run python examples/11_context_compaction.py"],
+         "uv run python examples/08_compaction_strategies.py"],
         ["03: drop session= on turn two — the agent forgets Alice.",
-         "04: the provider asks for a name, then uses it unprompted.",
-         "04: the final print shows session.state under 'user_memory'.",
-         "11: watch history shrink while the conversation keeps going."],
-        "Skip 11 if Ollama is not running and walk the code instead — the strategy "
-        "pipeline reads clearly without executing.")
+         "05: transcript holds 4 messages, the audit copy 6.",
+         "06: run twice — the on-disk record count grows 2 → 4.",
+         "08: before/after token counts for every strategy."],
+        "08 needs no model for six of its seven strategies, and 11/12/13/14 need none at "
+        "all — plenty to show if the model server stalls.")
     d.notes(s, """
 [SETUP]
-Example 11 needs a second model server (Ollama on 11434). Decide before the session
+Example 07 needs a second model server (Ollama on 11434). Decide before the session
 whether you are running it; if not, present it as a code read.
 
 [DEMO SCRIPT]
@@ -1543,7 +1655,7 @@ agent.
 """)
 
     # ---- 30 MCP code -----------------------------------------------------------------
-    s = d.slide("Connecting a tool server", eyebrow="examples/05_mcp_docs_agent.py")
+    s = d.slide("Connecting a tool server", eyebrow="examples/09_mcp_docs_agent.py")
     d.code(s, ML, 1.85, 7.5, [
         "from agent_framework import Agent, MCPStreamableHTTPTool",
         "",
@@ -1585,7 +1697,7 @@ server can add a tool tomorrow and your agent picks it up with no redeploy. It i
 risk — the server can change behaviour under you.
 
 [DEMO CUE]
-uv run python examples/05_mcp_docs_agent.py
+uv run python examples/09_mcp_docs_agent.py
 
 [NETWORK WARNING]
 This one hits the public internet. If conference wifi is unreliable, screenshot the output
@@ -1595,7 +1707,7 @@ beforehand. Also note it is the slowest demo in the deck — the model reads rea
     # ---- 31 DEMO 4 -------------------------------------------------------------------
     s = d.demo(
         "Demo — an agent with a documentation tool server",
-        ["uv run python examples/05_mcp_docs_agent.py",
+        ["uv run python examples/09_mcp_docs_agent.py",
          "",
          "# question it answers:",
          "#  \"How do I create an Azure storage account with the az CLI?\""],
@@ -1625,7 +1737,7 @@ Three minutes, and be ready to cut it to zero if the network is bad.
     # ---- 32 SECTION 6 ----------------------------------------------------------------
     s = d.section("06", "Workflows",
                   "When one agent in a loop is the wrong shape for the problem",
-                  ["functional", "graph", "orchestration patterns"])
+                  ["functional", "graph", "executors", "edges", "orchestration"])
     d.notes(s, """
 [TALK TRACK]
 The pivot in this module: an agent decides what to do next; a workflow is you deciding.
@@ -1677,7 +1789,7 @@ distinction stick far better than the slide does.
 """)
 
     # ---- 34 Functional workflow ------------------------------------------------------
-    s = d.slide("Functional workflows", eyebrow="examples/06_functional_workflow.py")
+    s = d.slide("Functional workflows", eyebrow="examples/10_functional_workflow.py")
     d.code(s, ML, 1.85, 7.3, [
         "from agent_framework import Agent, workflow",
         "",
@@ -1717,7 +1829,7 @@ Small API detail people trip on: the result object is not the string. A workflow
 emit several outputs, so you index into `get_outputs()`.
 
 [DEMO CUE]
-uv run python examples/06_functional_workflow.py
+uv run python examples/10_functional_workflow.py
 
 [PRESENTER TIP]
 Add a third agent live — an editor that rewrites based on the review. Three lines. It shows
@@ -1725,7 +1837,7 @@ how cheap composition is once agents are just callables.
 """)
 
     # ---- 35 Graph workflow -----------------------------------------------------------
-    s = d.slide("Graph workflows", eyebrow="examples/07_graph_workflow.py")
+    s = d.slide("Graph workflows", eyebrow="examples/11_graph_workflow.py")
     d.code(s, ML, 1.85, 7.3, [
         "class UpperCase(Executor):",
         "    @handler",
@@ -1777,10 +1889,206 @@ executor sends onward, the second is what it yields as output. Never means "send
 onward". Worth thirty seconds; the types are load-bearing.
 
 [DEMO CUE]
-uv run python examples/07_graph_workflow.py
+uv run python examples/11_graph_workflow.py
 """)
 
-    # ---- 36 Orchestration patterns ---------------------------------------------------
+    # ---- 36 Executor forms -----------------------------------------------------------
+    s = d.slide("Executors: four ways to declare a node",
+                eyebrow="examples/12_executor_types.py")
+    d.code(s, ML, 1.82, 7.15, [
+        "class Ingest(Executor):                  # 1. class-based",
+        "    @handler",
+        "    async def from_text(self, t: str, ctx: WorkflowContext[str]):",
+        "        await ctx.send_message(t)",
+        "",
+        "    @handler                             # 2. a second input type",
+        "    async def from_lines(self, lines: list[str], ctx: ...):",
+        "        await ctx.send_message(\" \".join(lines))",
+        "",
+        "@executor(id=\"normalise\")                 # 3. function-based",
+        "async def normalise(t: str, ctx: WorkflowContext[str]):",
+        "    await ctx.send_message(t.lower())",
+        "",
+        "@handler(input=str, output=str, workflow_output=int)   # 4. explicit",
+        "async def count(self, text, ctx):        # no annotations needed",
+        "    await ctx.yield_output(len(text.split()))",
+    ], size=12)
+    d.text(s, ML + 7.45, 1.9, 4.35, 0.3, "THE CONTEXT TYPES ARE THE CONTRACT", 10.5, CYAN,
+           bold=True)
+    ctxs = [("WorkflowContext", "side effects only", DIM),
+            ("WorkflowContext[T]", "sends T downstream", CYAN),
+            ("WorkflowContext[Never, U]", "yields U, sends nothing", GREEN),
+            ("WorkflowContext[T, U]", "sends T and yields U", VIOLET)]
+    cy = 2.32
+    for sig, meaning, col in ctxs:
+        d.rect(s, ML + 7.45, cy, 0.05, 0.62, col)
+        d.text(s, ML + 7.68, cy + 0.02, 4.1, 0.26, sig, 11, TEXT, font=MONO)
+        d.text(s, ML + 7.68, cy + 0.32, 4.1, 0.26, meaning, 11, MUTED)
+        cy += 0.72
+    d.text(s, ML + 7.45, 5.3, 4.35, 1.0,
+           "Validated at build time — a mismatch fails the build, not the run.", 12.5,
+           AMBER, spacing=1.25)
+    d.notes(s, """
+[TALK TRACK]
+Four declaration forms, and one idea that matters more than all of them: the
+WorkflowContext type parameters are not decoration, they are the node's contract.
+
+[THE FOUR FORMS]
+Class-based with @handler is the default. Add a second @handler and the same node accepts a
+second message type — dispatch is on the message type, not the edge. The @executor
+decorator gives you the same thing from a plain async function. Explicit decorator types
+are the escape hatch when you cannot or will not annotate — and it is all-or-nothing, you
+cannot mix explicit params with hints.
+
+[THE CONTEXT TABLE — spend your time here]
+No parameters means the node is a sink: logging, metrics, tracing. One parameter is what it
+sends. WorkflowContext[Never, U] means it yields a workflow output and sends nothing — that
+is your terminal node. Two parameters means it does both.
+
+[WHY IT MATTERS]
+These are validated when you call build(). Get them wrong and you get a
+WorkflowValidationError before anything executes — for example, yielding an output from a
+node declared WorkflowContext[str] fails with "must have output type annotations defined".
+That is a good error to have seen once.
+
+[BUILD-TIME OUTPUT DESIGNATION]
+output_from and intermediate_output_from on WorkflowBuilder decide whose yields the caller
+sees. There is no per-call flag and no ctx.yield_intermediate — the same yield_output call is
+labelled output or intermediate purely by that build-time list.
+
+[DEMO CUE]
+uv run python examples/12_executor_types.py        (no model needed)
+""")
+
+    # ---- 37 Edge patterns ------------------------------------------------------------
+    s = d.slide("Edges: six ways to wire the graph",
+                eyebrow="examples/13_edge_patterns.py")
+    edges = [
+        ("add_chain([a, b, c])", "linear pipeline — the 90% case", CYAN),
+        ("add_edge(a, b, condition=...)", "take the edge only if a predicate holds", CYAN),
+        ("add_fan_out_edges(a, [b, c])", "same message to several nodes, in parallel",
+         VIOLET),
+        ("add_fan_in_edges([b, c], d)", "d receives a list of collected results", VIOLET),
+        ("add_switch_case_edge_group(...)", "Case / Default — exactly one branch wins",
+         AMBER),
+        ("add_multi_selection_edge_group(...)", "pick a subset of targets at runtime",
+         GREEN),
+    ]
+    cy = 1.88
+    for sig, meaning, col in edges:
+        d.card(s, ML, cy, 7.15, 0.66)
+        d.rect(s, ML, cy, 0.055, 0.66, col)
+        d.text(s, ML + 0.3, cy + 0.09, 4.4, 0.26, sig, 12, TEXT, bold=True, font=MONO)
+        d.text(s, ML + 0.3, cy + 0.38, 6.6, 0.24, meaning, 11, MUTED)
+        cy += 0.78
+    d.code(s, ML + 7.45, 1.88, 4.35, [
+        "wf = (WorkflowBuilder(",
+        "        start_executor=triage)",
+        "  .add_switch_case_edge_group(",
+        "     triage, [",
+        "       Case(condition=is_sev1,",
+        "            target=pager),",
+        "       Default(target=backlog),",
+        "     ])",
+        "  .build())",
+    ], size=11.5)
+    d.callout(s, ML + 7.45, 4.62, 4.35, 1.66, "two gotchas",
+              "Conditional edges are evaluated independently — overlapping predicates run "
+              "both branches.\nA switch group needs a Default.", ROSE)
+    d.notes(s, """
+[TALK TRACK]
+Nodes do the work; edges are the design. Six primitives, and picking the right one is most
+of what graph design actually is.
+
+[WORK DOWN THE LIST]
+add_chain is the one you will use most — do not be clever when a chain will do. Conditional
+edges guard a branch with a predicate. Fan-out sends the same message to several nodes;
+fan-in collects their results and hands the target a list, which is the bit people do not
+expect — the fan-in handler signature takes list[T].
+
+[SWITCH VS CONDITIONAL — the real distinction]
+Conditional edges are independent: two overlapping predicates means both branches run. A
+switch-case group picks exactly one, and requires a Default. If you want mutually exclusive
+routing, use switch-case and let the framework enforce it rather than hand-writing
+complementary lambdas.
+
+[MULTI-SELECTION]
+The selection function receives the message plus every candidate target id and returns the
+ids you want. Good for notification fan-out where the channel set is data-driven.
+
+[PRESENTER TIP]
+Example 13 is six complete workflows in one file, all model-free, all printing their
+routing decisions. It is the best file in the repo for reading aloud.
+
+[DEMO CUE]
+uv run python examples/13_edge_patterns.py        (no model needed)
+""")
+
+    # ---- 38 Workflow execution -------------------------------------------------------
+    s = d.slide("Execution: supersteps, events and shared state",
+                eyebrow="examples/14_workflow_execution.py")
+    d.text(s, ML, 1.78, CW, 0.34,
+           "Workflows advance in supersteps — each one delivers a round of messages, which "
+           "is why parallel branches appear grouped.", 14.5, MUTED)
+    d.code(s, ML, 2.3, 6.6, [
+        "-- superstep 1",
+        "   executor_invoked    parse    laptop, dock",
+        "   intermediate        parse    parsed 2 items",
+        "   executor_completed  parse    [['laptop','dock'], ...]",
+        "-- superstep 2",
+        "   executor_invoked    price    ['laptop', 'dock']",
+        "   intermediate        price    priced 2 items",
+        "-- superstep 3",
+        "   executor_invoked    invoice  {'laptop': 60, ...}",
+        "   output              invoice  invoice for 2 items ...",
+    ], size=11.5, title="workflow.run(x, stream=True)")
+    cards = [
+        ("ctx.set_state / get_state", "scratch space every executor in the run can read",
+         GREEN),
+        ("get_outputs()", "the terminal answer — from output_from nodes", CYAN),
+        ("get_intermediate_outputs()", "progress — from intermediate_output_from nodes",
+         VIOLET),
+    ]
+    cy = 2.62
+    for name, sub, col in cards:
+        c = d.card(s, ML + 7.1, cy, 4.7, 0.92)
+        d.rect(s, ML + 7.1, cy, 0.055, 0.92, col)
+        d.text(s, ML + 7.4, cy + 0.14, 4.2, 0.28, name, 12.5, TEXT, bold=True, font=MONO)
+        d.text(s, ML + 7.4, cy + 0.46, 4.2, 0.34, sub, 11, MUTED, spacing=1.15)
+        cy += 1.04
+    d.callout(s, ML, 5.72, CW, 0.95, "state is per run, not per workflow",
+              "Two runs of the same workflow object do not see each other's state — so a "
+              "built workflow is safe to reuse across requests.", CYAN)
+    d.notes(s, """
+[TALK TRACK]
+Building the graph is half of it. This slide is the runtime.
+
+[SUPERSTEPS]
+This is the mental model to install. A workflow does not run node-by-node in a straight
+line; it advances in supersteps, each delivering one round of messages. That is why a
+fan-out's three branches all appear inside one superstep rather than interleaved. If
+someone asks how parallelism is scheduled, this is the answer.
+
+[THE EVENT STREAM]
+stream=True gives you the timeline: started, superstep_started, executor_invoked,
+executor_completed, output or intermediate, superstep_completed, status. Filter to
+executor_invoked and output and you have a progress feed for a UI, essentially for free.
+Then call get_final_response() on the stream for the aggregated result.
+
+[SHARED STATE]
+ctx.set_state / ctx.get_state — note these are synchronous in 1.13, not awaited. Use them
+for facts several executors need; use messages for the thing you are actually passing
+along. Do not thread a value through three handlers that do not care about it.
+
+[THE CALLOUT MATTERS FOR ARCHITECTS]
+Run state does not leak between runs, so you build the workflow once and reuse the object
+per request. That is the question every architect in the room is about to ask.
+
+[DEMO CUE]
+uv run python examples/14_workflow_execution.py        (no model needed)
+""")
+
+    # ---- 39 Orchestration patterns ---------------------------------------------------
     s = d.slide("Orchestration patterns")
     pats = [
         ("Sequential", "SequentialBuilder", "A → B → C. Pipelines, review chains.", CYAN),
@@ -1816,7 +2124,7 @@ of the first two.
 Draft → review → edit. Boring and correct.
 
 [CONCURRENT]
-Same prompt to N agents, gather all responses. Example 08 does this with a researcher, a
+Same prompt to N agents, gather all responses. Example 15 does this with a researcher, a
 marketer and a compliance reviewer. Latency of the slowest, not the sum.
 
 [HANDOFF]
@@ -1838,7 +2146,7 @@ twenty times what you budgeted.
 """)
 
     # ---- 37 Concurrent code ----------------------------------------------------------
-    s = d.slide("Fan-out, fan-in", eyebrow="examples/08_concurrent_orchestration.py")
+    s = d.slide("Fan-out, fan-in", eyebrow="examples/15_concurrent_orchestration.py")
     d.code(s, ML, 1.85, 7.3, [
         "from agent_framework.orchestrations import ConcurrentBuilder",
         "",
@@ -1891,28 +2199,35 @@ sweet spot; ten near-identical agents produce ten near-identical answers and one
 bill.
 
 [DEMO CUE]
-uv run python examples/08_concurrent_orchestration.py
+uv run python examples/15_concurrent_orchestration.py
 """)
 
     # ---- 38 DEMO 5 -------------------------------------------------------------------
     s = d.demo(
-        "Demo — workflows, three ways",
-        ["uv run python examples/07_graph_workflow.py     # no model needed",
-         "uv run python examples/06_functional_workflow.py",
-         "uv run python examples/08_concurrent_orchestration.py"],
-        ["07: pure topology — executors and one edge, instant.",
-         "06: two agents chained; read the code beside the output.",
-         "08: three named perspectives, printed with author_name.",
-         "Add a third agent to 06 live — an editor that applies the review."],
-        "07 always runs. If the model server is struggling, do 07, then read 06 and 08 "
-        "as code with the diagrams on screen.")
+        "Demo — workflows, end to end",
+        ["# these four need no model at all",
+         "uv run python examples/11_graph_workflow.py",
+         "uv run python examples/12_executor_types.py",
+         "uv run python examples/13_edge_patterns.py",
+         "uv run python examples/14_workflow_execution.py",
+         "",
+         "uv run python examples/10_functional_workflow.py",
+         "uv run python examples/15_concurrent_orchestration.py"],
+        ["12: one node, two input types — dispatch is on type.",
+         "13: six routing patterns, each printing its decision.",
+         "14: the superstep timeline, live.",
+         "10/15: agents as nodes; 15 prints author_name."],
+        "Four of these are pure Python. If the model server is struggling, run 11, 12, 13 "
+        "and 14, then read 10 and 15 as code with the diagrams on screen.")
     d.notes(s, """
 [DEMO SCRIPT]
-Order matters: 07 first because it is instant and needs nothing, which resets confidence
-after any earlier hiccup. Then 06 for readability. Then 08 for the payoff.
+Order matters: the model-free ones first because they are instant, which resets confidence
+after any earlier hiccup. 13 is the most quotable — six workflows in one file, each printing
+its routing decision. 14 is the most instructive: the superstep timeline makes the execution
+model visible in a way the diagram cannot. Then 10 for readability and 15 for the payoff.
 
 [LIVE EDIT]
-Adding an editor agent to 06 is the best live-coding moment in the deck — three lines,
+Adding an editor agent to 10 is the best live-coding moment in the deck — three lines,
 obviously correct, immediately runs. Practise it so you do not fumble the f-string.
 
 [PRESENTER TIP]
@@ -2020,7 +2335,7 @@ pick which.
 The framework figures out whether something is agent or function middleware from either the
 decorator or the context parameter's type annotation. Give it both and it validates they
 agree. Give it neither and it raises rather than guessing — which is the right call, and
-example 14's docstring spells out all four cases.
+example 18's docstring spells out all four cases.
 
 [PRACTICAL GUIDANCE]
 Class-based for anything with dependencies you want to inject and mock. Function-based for
@@ -2033,7 +2348,7 @@ Both kinds go in the same `middleware=` list. Nothing to separate by hand.
 
     # ---- 42 Guardrail ----------------------------------------------------------------
     s = d.slide("Short-circuiting: a guardrail in twelve lines",
-                eyebrow="examples/12_class_based_middleware.py")
+                eyebrow="examples/16_class_based_middleware.py")
     d.code(s, ML, 1.85, 7.6, [
         "class SecurityAgentMiddleware(AgentMiddleware):",
         "    async def process(self, context, call_next):",
@@ -2076,26 +2391,26 @@ Real deployments use a classifier or a dedicated safety service. Say so — this
 will notice.
 
 [DEMO CUE]
-uv run python examples/12_class_based_middleware.py
+uv run python examples/16_class_based_middleware.py
 """)
 
     # ---- 43 DEMO 6 -------------------------------------------------------------------
     s = d.demo(
         "Demo — guardrails and timing",
-        ["uv run python examples/12_class_based_middleware.py",
+        ["uv run python examples/16_class_based_middleware.py",
          "",
          "# same behaviour, different ergonomics:",
-         "uv run python examples/14_decorator_middleware.py"],
+         "uv run python examples/18_decorator_middleware.py"],
         ["Normal query: security passes, tool runs, timing logged.",
          "\"What's the password…\": blocked before the model is called.",
          "Note the log ordering — outer in, inner in, inner out, outer out.",
-         "14 shows the decorator form with untyped parameters."],
-        "Example 13 uses FoundryChatClient and needs `az login` — use 12 and 14, which "
+         "18 shows the decorator form with untyped parameters."],
+        "Example 17 uses FoundryChatClient and needs `az login` — use 16 and 18, which "
         "run against the local model.")
     d.notes(s, """
 [IMPORTANT — repo gotcha]
-examples/13 is Azure Foundry only and requires `az login`. Do not run it live unless you
-have already authenticated. 12 and 14 both run against the local vLLM server.
+examples/17 is Azure Foundry only and requires `az login`. Do not run it live unless you
+have already authenticated. 16 and 18 both run against the local vLLM server.
 
 [DEMO SCRIPT]
 Run 12. The output interleaves security check, tool logging and the answer. Point at the
@@ -2126,7 +2441,7 @@ photograph.
 
     # ---- 45 Structured output --------------------------------------------------------
     s = d.slide("Structured output: stop parsing prose",
-                eyebrow="examples/10_response_format.py")
+                eyebrow="examples/19_response_format.py")
     d.code(s, ML, 1.85, 7.4, [
         "class OutputStruct(BaseModel):",
         "    city: str",
@@ -2162,11 +2477,11 @@ something unparseable, and you need to decide whether that is a retry or an erro
 
 [STREAMING]
 Both work together: stream tokens for perceived latency, then call
-`stream.get_final_response()` for the parsed object. Example 10 shows both.
+`stream.get_final_response()` for the parsed object. Example 19 shows both.
 
 [as_agent()]
 Minor but nice: `client.as_agent(...)` is shorthand for constructing an Agent around that
-client. Used in example 10 and in others/01.
+client. Used in example 19 and in others/01.
 
 [PRESENTER TIP]
 Frame this as the "integration slide" for anyone who has to feed an agent's output into a
@@ -2174,7 +2489,7 @@ downstream service. It is the answer to "how do I make this safe to consume?"
 """)
 
     # ---- 46 Harness ------------------------------------------------------------------
-    s = d.slide("Harness agents: planning built in", eyebrow="examples/09_harness_agent.py")
+    s = d.slide("Harness agents: planning built in", eyebrow="examples/20_harness_agent.py")
     d.code(s, ML, 1.85, 7.4, [
         "from agent_framework import create_harness_agent",
         "",
@@ -2210,7 +2525,7 @@ This is the maximally autonomous end of the spectrum we drew in "autonomy versus
 Harness agent at one end, graph workflow at the other. Same framework, opposite trade-offs.
 
 [COST WARNING]
-Planning loops burn tokens. Example 09 caps max_tokens at 200 per turn precisely because
+Planning loops burn tokens. Example 20 caps max_tokens at 200 per turn precisely because
 the local model has a small window and a harness agent will happily fill it.
 
 [HONEST TAKE]
@@ -2219,7 +2534,7 @@ harness earns its cost when the request genuinely is open-ended — investigatio
 debugging.
 
 [DEMO CUE — optional]
-uv run python examples/09_harness_agent.py   (interactive; only if you have time)
+uv run python examples/20_harness_agent.py   (interactive; only if you have time)
 """)
 
     # ---- 47 Hosting surfaces ---------------------------------------------------------
@@ -2413,7 +2728,7 @@ nothing dispatches. That failure is baffling if you have not seen it before.
 [THE 8K WINDOW]
 This single constraint explains most of the odd-looking code in the examples: max_tokens on
 individual calls, default_options on fan-out participants, an aggressive compaction budget
-in example 11.
+in example 07.
 
 [THE ARGUMENT FOR SMALL MODELS]
 Make the quality point: if your tool descriptions are vague, a frontier model papers over
@@ -2568,40 +2883,52 @@ first. It makes the room honest and the Q&A far better.
         ("02", "add_tools", "typed tools", CYAN),
         ("03", "multi_turn", "sessions", CYAN),
         ("04", "memory", "ContextProvider", CYAN),
-        ("05", "mcp_docs_agent", "MCP over HTTP", VIOLET),
-        ("06", "functional_workflow", "@workflow", VIOLET),
-        ("07", "graph_workflow", "executors + edges", VIOLET),
-        ("08", "concurrent_orchestration", "fan-out / fan-in", VIOLET),
-        ("09", "harness_agent", "planning loop", GREEN),
-        ("10", "response_format", "structured output", GREEN),
-        ("11", "context_compaction", "history budget", GREEN),
-        ("12", "class_based_middleware", "guardrail + timing", AMBER),
-        ("13", "function_based_middleware", "async fn (Foundry)", AMBER),
-        ("14", "decorator_middleware", "@agent_middleware", AMBER),
+        ("05", "memory_providers", "layered providers", CYAN),
+        ("06", "persistent_history", "file + to_dict", CYAN),
+        ("07", "context_compaction", "CompactionProvider", CYAN),
+        ("08", "compaction_strategies", "all 7 strategies", CYAN),
+        ("09", "mcp_docs_agent", "MCP over HTTP", VIOLET),
+        ("10", "functional_workflow", "@workflow", VIOLET),
+        ("11", "graph_workflow", "executors + edges", VIOLET),
+        ("12", "executor_types", "4 executor forms", VIOLET),
+        ("13", "edge_patterns", "6 wiring patterns", VIOLET),
+        ("14", "workflow_execution", "supersteps, events", VIOLET),
+        ("15", "concurrent_orchestration", "fan-out / fan-in", VIOLET),
+        ("16", "class_based_middleware", "guardrail + timing", AMBER),
+        ("17", "function_based_middleware", "async fn (Foundry)", AMBER),
+        ("18", "decorator_middleware", "@agent_middleware", AMBER),
+        ("19", "response_format", "structured output", GREEN),
+        ("20", "harness_agent", "planning loop", GREEN),
     ]
     for i, (num, name, concept, col) in enumerate(rows):
-        col_i, row_i = i // 7, i % 7
+        col_i, row_i = i // 10, i % 10
         x = ML + col_i * 6.1
-        y = 1.85 + row_i * 0.66
-        d.rect(s, x, y, 5.7, 0.56, PANEL if row_i % 2 == 0 else BG, radius=0.1,
+        y = 1.8 + row_i * 0.475
+        d.rect(s, x, y, 5.7, 0.41, PANEL if row_i % 2 == 0 else BG, radius=0.12,
                shape=MSO_SHAPE.ROUNDED_RECTANGLE)
-        d.text(s, x + 0.2, y + 0.15, 0.5, 0.28, num, 12, col, bold=True, font=MONO)
-        d.text(s, x + 0.72, y + 0.14, 2.9, 0.3, name, 12, TEXT, bold=True, font=MONO)
-        d.text(s, x + 3.72, y + 0.15, 1.85, 0.28, concept, 10.5, MUTED)
-    d.text(s, ML, 6.5, CW, 0.32,
+        d.text(s, x + 0.2, y + 0.08, 0.5, 0.26, num, 11, col, bold=True, font=MONO)
+        d.text(s, x + 0.7, y + 0.08, 3.1, 0.26, name, 11, TEXT, bold=True, font=MONO)
+        d.text(s, x + 3.85, y + 0.09, 1.8, 0.24, concept, 10, MUTED)
+    d.text(s, ML, 6.66, CW, 0.32,
            "plus  dev_ui/  ·  agent_ui/  ·  others/   for DevUI, AG-UI, A2A and Azure "
-           "Functions hosting", 12, DIM)
+           "Functions hosting", 11.5, DIM)
     d.notes(s, """
 [TALK TRACK]
-Fourteen examples, four groups by colour: fundamentals, composition, production, and
-middleware. All runnable, all short.
+Twenty examples in teaching order — the numbers are the order to work through them, top of
+the left column to bottom of the right. Colour groups the modules: agents and memory,
+workflows, middleware, production.
+
+[POINT AT THE MODEL-FREE ONES]
+11, 12, 13 and 14 need no model at all, and 08 needs one only for its summarisation
+strategy. That is a third of the lab people can run before the model server finishes
+warming up.
 
 [HOMEWORK SUGGESTION]
-Point people at 09 and 11 as the two worth reading afterwards — they are the most
+Point people at 20 and 07 as the two worth reading afterwards — they are the most
 production-relevant and the least covered by the live demos.
 
 [REPO CAVEATS TO REPEAT]
-Example 13 needs Azure Foundry and `az login`. Example 11 needs an Ollama endpoint on
+Example 17 needs Azure Foundry and `az login`. Example 07 needs an Ollama endpoint on
 11434 for the summariser. Everything else runs against the local vLLM server.
 
 [PRESENTER TIP]
@@ -2632,7 +2959,7 @@ observe what changes.
         d.text(s, x + 0.32, y + 0.62, 5.0, 0.3, url, 12, col, font=MONO)
         d.text(s, x + 0.32, y + 1.0, 5.0, 0.4, desc, 11.5, MUTED, spacing=1.15)
     d.callout(s, ML, 5.62, CW, 1.05, "stretch goals from the lab",
-              "Rebuild example 06 with SequentialBuilder or HandoffBuilder · add "
+              "Rebuild example 10 with SequentialBuilder or HandoffBuilder · add "
               "approval_mode=\"always_require\" to a tool and watch the flow · launch DevUI "
               "against the examples directory.", CYAN)
     d.notes(s, """

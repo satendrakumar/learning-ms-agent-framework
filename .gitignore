@@ -10,3 +10,6 @@ wheels/
 .venv
 .env
 .idea
+
+# Local session stores written by the examples
+.sessions/

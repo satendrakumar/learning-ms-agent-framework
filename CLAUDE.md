@@ -21,7 +21,7 @@ uv run python others/02_run_agent_on_a2a.py       # A2A server on :9999
 uv run python others/03_connect_remote_a2a_agent.py
 ```
 
-`examples/07_graph_workflow.py` needs no model at all — use it to sanity-check the install.
+`examples/11_graph_workflow.py` needs no model at all — use it to sanity-check the install.
 
 ## Model backend: local vLLM, not hosted OpenAI
 
@@ -41,11 +41,11 @@ editing examples here:
   Responses API, which vLLM does not serve — see the comment in `examples/01_hello_agent.py:14`.
 - The 8192-token context is small, so examples pass explicit caps:
   `options={"max_tokens": ...}` per call, or `default_options={"max_tokens": ...}` on the `Agent`.
-- `examples/11_compaction.py` additionally expects an **Ollama** endpoint on `localhost:11434` for its
-  summarizer client.
+- `examples/07_context_compaction.py` additionally expects an **Ollama** endpoint on `localhost:11434`
+  for its summarizer client.
 
 Some scripts deliberately use other providers and will not work against vLLM without edits:
-`examples/13_function_based_middleware.py`, `examples/14_decorator_middleware.py` (partly), and
+`examples/17_function_based_middleware.py`, `examples/18_decorator_middleware.py` (partly), and
 `others/01_app_run.py` use `FoundryChatClient` / Azure credentials and require `az login`.
 
 ## Import convention
@@ -68,10 +68,21 @@ touching `pyproject.toml`. `python-dotenv` and `pydantic` are transitive deps, n
 
 ## Layout and the concepts each directory teaches
 
-- `examples/01`–`14` — the ordered curriculum: agent basics and streaming → `@tool` functions →
-  sessions → `ContextProvider` memory → MCP → functional `@workflow` → graph `WorkflowBuilder` →
-  `ConcurrentBuilder` → harness agent → structured output via `response_format` → history compaction →
-  middleware in class, function, and decorator form. `examples/README.md` walks through 01–08.
+- `examples/01`–`20` — the curriculum, numbered in teaching order (work straight through):
+  - `01`–`03` agents & tools — basics/streaming, `@tool`, sessions
+  - `04`–`08` memory, context & persistence — custom `ContextProvider`, layered providers
+    (transcript + Mem0 + audit), `FileHistoryProvider` / `session.to_dict()`, `CompactionProvider`,
+    all seven compaction strategies compared via `apply_compaction`
+  - `09` MCP tool servers
+  - `10`–`15` workflows — `@workflow`, graph basics, the four executor forms and `WorkflowContext`
+    type parameters, the six edge primitives, supersteps/event streaming/shared run state,
+    `ConcurrentBuilder`
+  - `16`–`18` middleware — class, function and decorator form
+  - `19`–`20` production — structured output, harness agent
+- `11`, `12`, `13`, `14` run with **no model at all** — use them to verify an install or to demo when the
+  model server is cold. `08` needs a model only for its summarization strategy.
+- The numbering is load-bearing: it is referenced by `examples/README.md`, the deck's lab-map and demo
+  slides, and this file. Renumbering means updating all four — see the deck notes below.
 - `others/` — hosting and agent-to-agent: `AgentFunctionApp` (Azure Functions), A2A server via
   Starlette + `A2AExecutor`, and an `A2AAgent` client that discovers a remote agent card.
 - `agent_ui/` — AG-UI protocol: FastAPI server (`add_agent_framework_fastapi_endpoint`) and a matching
@@ -87,7 +98,7 @@ flag that production code should use `"always_require"`.
 
 ## The training deck
 
-`slides/build_deck.py` generates `slides/Microsoft-Agent-Framework-Training.pptx` (56 slides) from scratch
+`slides/build_deck.py` generates `slides/Microsoft-Agent-Framework-Training.pptx` (61 slides) from scratch
 with `python-pptx` — the deck is a build artifact, so edit the script, never the `.pptx`:
 
 ```bash
@@ -100,7 +111,8 @@ notes. Layout is absolute inches on a 13.333×7.5 canvas, so it warns at build t
 lands on top of a code panel — treat any `WARN` line as a real overlap and move the shape.
 
 Slide content cites example filenames directly; if you rename anything under `examples/`, update the deck
-too. To check rendering, export with PowerPoint and read the PDF:
+too — the lab-map slide and the demo slides both list paths. `.sessions/` is a local store written by
+example 06 and is gitignored. To check rendering, export with PowerPoint and read the PDF:
 
 ```bash
 osascript -e 'tell application "Microsoft PowerPoint"
