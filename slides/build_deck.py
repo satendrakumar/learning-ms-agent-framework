@@ -2937,7 +2937,66 @@ Suggest a concrete exercise: add a second tool to 02, then make it always_requir
 observe what changes.
 """)
 
-    # ---- 55 Resources ----------------------------------------------------------------
+    # ---- 60 Exercises ----------------------------------------------------------------
+    s = d.slide("Now you build it", eyebrow="exercises/")
+    d.text(s, ML, 1.78, CW, 0.34,
+           "Eight self-checking tasks. Each one fails with a hint until you finish it — "
+           "five need no model.", 15, MUTED)
+    ex = [
+        ("01", "tool_design", "docstrings and Field descriptions as the model's API", CYAN),
+        ("02", "context_provider", "before_run / after_run and provider state", CYAN),
+        ("03", "compaction_budget", "composing strategies under a token budget", CYAN),
+        ("04", "executor_contract", "WorkflowContext type parameters", VIOLET),
+        ("05", "routing", "Case / Default switch-case routing", VIOLET),
+        ("06", "fan_in", "what a fan-in target actually receives", VIOLET),
+        ("07", "guardrail_middleware", "short-circuiting before the model runs", AMBER),
+        ("08", "structured_output", "response_format and the failure branch", GREEN),
+    ]
+    for i, (num, name, what, col) in enumerate(ex):
+        col_i, row_i = i // 4, i % 4
+        x = ML + col_i * 6.05
+        y = 2.24 + row_i * 0.72
+        d.card(s, x, y, 5.7, 0.6)
+        d.rect(s, x, y, 0.055, 0.6, col)
+        d.text(s, x + 0.28, y + 0.05, 0.42, 0.26, num, 11, col, bold=True, font=MONO)
+        d.text(s, x + 0.74, y + 0.06, 2.5, 0.26, name, 11.5, TEXT, bold=True, font=MONO)
+        d.text(s, x + 0.74, y + 0.32, 4.8, 0.24, what, 10.5, MUTED)
+    d.code(s, ML, 5.24, CW, [
+        "uv run python exercises/01_tool_design.py      # read the FAILs, edit, repeat",
+        "uv run python exercises/run_all.py --offline   # the five that need no model",
+    ], size=12.5)
+    d.rect(s, ML, 6.34, 0.05, 0.34, GREEN)
+    d.text(s, ML + 0.24, 6.36, CW - 0.3, 0.3,
+           "Worked answers in exercises/solutions/ — read them once you have something "
+           "failing for the right reason.", 12, MUTED)
+    d.notes(s, """
+[TALK TRACK]
+This is the slide to land before you let people loose. Reading code and writing code are
+different skills, and only one of them survives contact with their own codebase on Monday.
+
+[HOW THE EXERCISES WORK]
+Every file has TODOs and a set of checks at the bottom. Run it and it tells you exactly
+which checks fail and why. It exits non-zero until you are done, so nobody has to guess
+whether they finished. Worked answers sit in exercises/solutions/.
+
+[WHICH ONES TO ASSIGN]
+If you have twenty minutes, do 01 and 04. 01 makes the "docstring is an API" lesson
+mechanical — the check reads the generated JSON schema, so a vague docstring fails. 04
+makes them meet a real WorkflowValidationError, which is the fastest way to internalise the
+context type parameters.
+
+[THE ONE WITH THE BEST PAYOFF]
+03. It looks like "hit the token budget", but the budget is always hit — the composed
+strategy falls back to dropping whole groups. The exercise makes you notice that the blunt
+fallback keeps 3 messages while a tool-aware strategy keeps 8 at the same budget. That is a
+real production insight and it lands much harder as a discovery than as a bullet.
+
+[LOGISTICS]
+Five of the eight need no model, so hand these out early — people can start while the model
+server warms up. Point them at run_all.py --offline.
+""")
+
+    # ---- 61 Resources ----------------------------------------------------------------
     s = d.slide("Where to go next")
     res = [
         ("Documentation", "learn.microsoft.com/agent-framework",
@@ -2958,10 +3017,10 @@ observe what changes.
         d.text(s, x + 0.32, y + 0.22, 5.0, 0.32, name, 16, TEXT, bold=True)
         d.text(s, x + 0.32, y + 0.62, 5.0, 0.3, url, 12, col, font=MONO)
         d.text(s, x + 0.32, y + 1.0, 5.0, 0.4, desc, 11.5, MUTED, spacing=1.15)
-    d.callout(s, ML, 5.62, CW, 1.05, "stretch goals from the lab",
-              "Rebuild example 10 with SequentialBuilder or HandoffBuilder · add "
-              "approval_mode=\"always_require\" to a tool and watch the flow · launch DevUI "
-              "against the examples directory.", CYAN)
+    d.callout(s, ML, 5.62, CW, 1.05, "before you leave",
+              "Work through exercises/ — eight self-checking tasks, five of which need no "
+              "model. Then: rebuild example 10 with SequentialBuilder, or set "
+              "approval_mode=\"always_require\" on a tool and watch the flow.", CYAN)
     d.notes(s, """
 [TALK TRACK]
 Four links. The one to push hardest is python/samples in the GitHub repo — it is

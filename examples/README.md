@@ -93,6 +93,18 @@ Example `08` runs six of its seven strategies without a model (only summarizatio
 needs one). Example `07` expects a second, cheaper summariser model on
 `http://localhost:11434/v1` (Ollama).
 
+## Practice
+
+Reading is not the same as writing. `../exercises/` has eight self-checking tasks
+that make you build the thing yourself — five need no model:
+
+```bash
+uv run python exercises/01_tool_design.py     # then follow the FAILs
+uv run python exercises/run_all.py --offline
+```
+
+`exercises/README.md` maps each task back to the example above that it drills.
+
 ## Stretch goals
 
 - Launch **DevUI** to chat with your agents in a browser:

@@ -81,8 +81,13 @@ touching `pyproject.toml`. `python-dotenv` and `pydantic` are transitive deps, n
   - `19`–`20` production — structured output, harness agent
 - `11`, `12`, `13`, `14` run with **no model at all** — use them to verify an install or to demo when the
   model server is cold. `08` needs a model only for its summarization strategy.
-- The numbering is load-bearing: it is referenced by `examples/README.md`, the deck's lab-map and demo
-  slides, and this file. Renumbering means updating all four — see the deck notes below.
+- The numbering is load-bearing: it is referenced by `examples/README.md`, `exercises/README.md`, the
+  deck's lab-map and demo slides, and this file. Renumbering means updating all of them.
+- `exercises/01`–`08` — self-checking practice tasks, each with `TODO`s and a set of `check(...)`
+  assertions from `exercises/_check.py`; worked answers in `exercises/solutions/`. The contract is that
+  **every exercise exits non-zero until finished and every solution exits zero** — `exercises/run_all.py`
+  (`--solutions`, `--offline`) verifies both, so run it after touching either side. Exercises 02, 07 and
+  08 need the model server; the other five are pure Python.
 - `others/` — hosting and agent-to-agent: `AgentFunctionApp` (Azure Functions), A2A server via
   Starlette + `A2AExecutor`, and an `A2AAgent` client that discovers a remote agent card.
 - `agent_ui/` — AG-UI protocol: FastAPI server (`add_agent_framework_fastapi_endpoint`) and a matching
