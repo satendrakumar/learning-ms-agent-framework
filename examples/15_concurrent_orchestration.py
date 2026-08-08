@@ -1,9 +1,9 @@
-"""Level 7b — Concurrent multi-agent orchestration (fan-out / fan-in).
+"""Workflows — Concurrent multi-agent orchestration (fan-out / fan-in).
 
 ConcurrentBuilder sends the same prompt to every participant in parallel, then
 aggregates their responses. Great for gathering diverse perspectives fast.
 
-Run:  uv run python examples/08_concurrent_orchestration.py
+Run:  uv run python examples/15_concurrent_orchestration.py
 """
 
 import asyncio

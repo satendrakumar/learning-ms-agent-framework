@@ -16,6 +16,7 @@ class UserMemoryProvider(ContextProvider):
     def __init__(self) -> None:
         super().__init__(self.DEFAULT_SOURCE_ID)
 
+
     async def before_run(
         self,
         *,
@@ -74,6 +75,8 @@ async def main() -> None:
 
     stored = session.state.get("user_memory", {})
     print(f"[Session State] Stored user name: {stored.get('user_name')}")
+
+    #print(f"session.state: {session.to_dict()}")
 
 
 if __name__ == "__main__":

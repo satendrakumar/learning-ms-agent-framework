@@ -1,9 +1,9 @@
-"""Level 7a — Graph workflow (executors + edges).
+"""Workflows — Graph workflow (executors + edges).
 
 The graph API gives you explicit control over topology. Executors are nodes;
 edges route messages between them. This tiny graph needs no model at all.
 
-Run:  uv run python examples/07_graph_workflow.py
+Run:  uv run python examples/11_graph_workflow.py
 """
 
 import asyncio
@@ -13,7 +13,7 @@ from agent_framework import (
     WorkflowBuilder,
     WorkflowContext,
     executor,
-    handler,
+    handler, WorkflowViz,
 )
 from typing_extensions import Never
 
@@ -43,6 +43,9 @@ def create_workflow():
 
 async def main() -> None:
     workflow = create_workflow()
+    workflow_viz = WorkflowViz(workflow)
+    print(workflow_viz.to_mermaid())
+    #print(workflow_viz.save_png("graph.png"))
     events = await workflow.run("hello world")
     print(f"Output: {events.get_outputs()}")        # ['DLROW OLLEH']
     print(f"Final state: {events.get_final_state()}")

@@ -6,9 +6,13 @@ Training material for onboarding engineers to the **Microsoft Agent Framework**
 ## Contents
 
 ```
-slides/     build_deck.py  → generates the .pptx training deck
-            Microsoft-Agent-Framework-Training.pptx  (39 slides)
-examples/   01..08 runnable code (the lab), README.md, .env.example
+slides/     Microsoft-Agent-Framework-Training.pptx  (61 slides, speaker notes)
+examples/   01..20 runnable code (the lab, in teaching order), README.md
+exercises/  01..08 self-checking practice tasks + solutions/, README.md
+dev_ui/     one-file DevUI launcher
+agent_ui/   AG-UI protocol server + console client
+others/     Azure Functions hosting, A2A server and client
+vllm-run.sh the local model server the lab runs against
 ```
 
 ## What is Microsoft Agent Framework?
@@ -21,29 +25,38 @@ and adds graph-based **workflows** for reliable orchestration.
 ## Quick start
 
 ```bash
-uv sync                                 # install deps (agent-framework, python-pptx)
-cp examples/.env.example examples/.env  # add your OPENAI_API_KEY
+uv sync                # install deps
+cp .env.example .env   # defaults to a local vLLM server — no hosted key needed
+./vllm-run.sh          # start the model server (first run downloads weights)
 
-# Run the lab (07 needs no API key — start there):
-uv run python examples/07_graph_workflow.py
+# 11 needs no model at all — start there to check the install:
+uv run python examples/11_graph_workflow.py
 uv run python examples/01_hello_agent.py
+
+# Then practise. Each exercise self-checks and tells you what is missing:
+uv run python exercises/01_tool_design.py
+uv run python exercises/run_all.py --offline   # the 5 that need no model
 
 # Rebuild the slide deck:
 uv run python slides/build_deck.py
 ```
 
-See `examples/README.md` for the full lab walkthrough.
+`examples/README.md` is the lab walkthrough; `exercises/README.md` maps each
+practice task to the example and deck module it belongs to.
 
 ## The training path
 
-1. Foundations — what an agent is, why a framework
-2. Core building blocks — chat clients, agents, tools, sessions
-3. Hands-on — first agent, tools, streaming, memory
-4. Tools & MCP
-5. Sessions & context providers (memory)
-6. Workflows — functional (`@workflow`) & graph (`WorkflowBuilder`)
-7. Multi-agent orchestration — sequential, concurrent, handoff, group chat, Magentic
-8. Production — middleware, observability, DevUI, hosting
+1. Why a framework — the gap between a completion and an agent
+2. Core concepts — chat clients, agents, sessions, the run lifecycle
+3. Tools — typed functions, the call loop, approval gates
+4. Memory & context — sessions, providers, persistence, compaction
+5. MCP — standardised tool servers
+6. Workflows — executors, edges, execution, orchestration patterns
+7. Middleware — guardrails and cross-cutting concerns
+8. A2A Protocol — Agent to Agent communication
+
+Each module has runnable examples in `examples/` and at least one exercise in
+`exercises/`.
 
 ## References
 
