@@ -6,8 +6,7 @@ Training material for onboarding engineers to the **Microsoft Agent Framework**
 ## Contents
 
 ```
-slides/     build_deck.py  → generates the .pptx training deck
-            Microsoft-Agent-Framework-Training.pptx  (61 slides, speaker notes)
+slides/     Microsoft-Agent-Framework-Training.pptx  (61 slides, speaker notes)
 examples/   01..20 runnable code (the lab, in teaching order), README.md
 exercises/  01..08 self-checking practice tasks + solutions/, README.md
 dev_ui/     one-file DevUI launcher
@@ -54,7 +53,7 @@ practice task to the example and deck module it belongs to.
 5. MCP — standardised tool servers
 6. Workflows — executors, edges, execution, orchestration patterns
 7. Middleware — guardrails and cross-cutting concerns
-8. Production — hosting, observability, best practice
+8. A2A Protocol — Agent to Agent communication
 
 Each module has runnable examples in `examples/` and at least one exercise in
 `exercises/`.
