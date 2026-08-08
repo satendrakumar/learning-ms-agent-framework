@@ -25,7 +25,7 @@ Run:  uv run python examples/12_executor_types.py      (no model needed)
 
 import asyncio
 
-from agent_framework import Executor, WorkflowBuilder, WorkflowContext, executor, handler
+from agent_framework import Executor, WorkflowBuilder, WorkflowContext, executor, handler, WorkflowViz
 from typing_extensions import Never
 
 
@@ -53,7 +53,7 @@ async def normalise(text: str, ctx: WorkflowContext[str]) -> None:
 @executor(id="audit")
 async def audit(text: str, ctx: WorkflowContext) -> None:
     """Sends nothing, yields nothing — a sink. Logging, metrics, tracing."""
-    print(f"   [audit] observed {text!r}")
+    print(f"  [audit] observed {text!r}")
 
 
 # --- 4. explicit type parameters instead of annotations -----------------------
@@ -93,6 +93,9 @@ def build():
 
 async def main() -> None:
     workflow = build()
+    workflow_viz = WorkflowViz(workflow)
+    print(workflow_viz.to_mermaid())
+    print(workflow_viz.save_png("graph.png"))
 
     print("run 1 — start executor receives a str")
     result = await workflow.run("  The   Quick  Brown Fox  ")

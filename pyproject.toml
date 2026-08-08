@@ -9,7 +9,9 @@ dependencies = [
     "agent-framework-a2a>=1.0.0b260709",
     "agent-framework-ag-ui>=1.0.1",
     "agent-framework-devui>=1.0.0b260709",
+    "graphviz>=0.21",
 ]
+
 
 [dependency-groups]
 dev = [

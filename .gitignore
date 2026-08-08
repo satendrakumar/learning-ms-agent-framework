@@ -13,3 +13,4 @@ wheels/
 
 # Local session stores written by the examples
 .sessions/
+.claude

@@ -13,7 +13,7 @@ from agent_framework import (
     WorkflowBuilder,
     WorkflowContext,
     executor,
-    handler,
+    handler, WorkflowViz,
 )
 from typing_extensions import Never
 
@@ -43,6 +43,9 @@ def create_workflow():
 
 async def main() -> None:
     workflow = create_workflow()
+    workflow_viz = WorkflowViz(workflow)
+    print(workflow_viz.to_mermaid())
+    #print(workflow_viz.save_png("graph.png"))
     events = await workflow.run("hello world")
     print(f"Output: {events.get_outputs()}")        # ['DLROW OLLEH']
     print(f"Final state: {events.get_final_state()}")

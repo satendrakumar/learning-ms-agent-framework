@@ -19,11 +19,12 @@ load_dotenv()
 async def main() -> None:
     tokenizer = CharacterEstimatorTokenizer()
 
-    summarizer_client = OpenAIChatCompletionClient(model="gemma4:e2b",base_url="http://localhost:11434/v1", api_key="fake")
+    summarizer_client = OpenAIChatCompletionClient(model="gemma4:e2b",base_url="http://localhost:11434/v1", api_key="test")
 
     client = OpenAIChatCompletionClient()
+
     pipeline = TokenBudgetComposedStrategy(
-        token_budget=2_000,
+        token_budget=2_000, #Maximum included token count allowed after compaction.
         tokenizer=tokenizer,
         strategies=[
             ToolResultCompactionStrategy(keep_last_tool_call_groups=1),
@@ -32,7 +33,7 @@ async def main() -> None:
         ],
     )
 
-    history = InMemoryHistoryProvider() #RedisHistoryProvider()
+    history = InMemoryHistoryProvider()
 
     compaction = CompactionProvider(
         before_strategy=pipeline,
@@ -53,6 +54,7 @@ async def main() -> None:
     print(await agent.run("find best laptop with in $200", session=session))
 
     print(await agent.run("what are tips to keep laptop better", session=session))
+
 
 
 if __name__ == "__main__":

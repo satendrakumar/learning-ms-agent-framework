@@ -78,8 +78,7 @@ async def serialise_yourself() -> None:
     # --- process A: have a turn, then serialise ------------------------------
     agent_a = make_agent()
     session = agent_a.create_session()
-    await agent_a.run("My favourite colour is teal.", session=session,
-                      options={"max_tokens": 60})
+    await agent_a.run("My favourite colour is white.", session=session,options={"max_tokens": 60})
 
     blob = json.dumps(session.to_dict())
     print(f"[serialise] {len(blob)} bytes of JSON — store this anywhere")
@@ -89,8 +88,7 @@ async def serialise_yourself() -> None:
     agent_b = make_agent()
     restored = AgentSession.from_dict(json.loads(blob))
 
-    result = await agent_b.run("What is my favourite colour?", session=restored,
-                               options={"max_tokens": 60})
+    result = await agent_b.run("What is my favourite colour?", session=restored,options={"max_tokens": 60})
     print(f"Agent (new instance, restored session): {result.text}")
     print("\nSame conversation, different agent object. That is the persistence seam.")
 

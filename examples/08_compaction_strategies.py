@@ -82,7 +82,10 @@ def size(messages: list[Message]) -> str:
 async def show(label: str, strategy: object, note: str) -> None:
     before = sample_history()
     after = await apply_compaction(before, strategy=strategy, tokenizer=TOKENIZER)
+    print("="*100)
     print(f"\n{label}")
+    for i, m in enumerate(after):
+        print(f"after message {i} \n: {m.to_dict()}")
     print(f"   before  {size(sample_history())}")
     print(f"   after   {size(after)}")
     print(f"   {note}")
@@ -131,7 +134,7 @@ async def main() -> None:
     await show(
         "TokenBudgetComposedStrategy(token_budget=400)",
         TokenBudgetComposedStrategy(
-            token_budget=400,
+            token_budget=400, # Maximum included token count allowed after compaction.
             tokenizer=TOKENIZER,
             strategies=[
                 ToolResultCompactionStrategy(keep_last_tool_call_groups=1),
