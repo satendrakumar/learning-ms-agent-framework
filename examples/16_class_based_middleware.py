@@ -42,6 +42,7 @@ def get_weather(
     location: Annotated[str, Field(description="The location to get the weather for.")],
 ) -> str:
     """Get the weather for a given location."""
+    print(f"get_weather called with location: {location}")
     conditions = ["sunny", "cloudy", "rainy", "stormy"]
     return f"The weather in {location} is {conditions[randint(0, 3)]} with a high of {randint(10, 30)}°C."
 
