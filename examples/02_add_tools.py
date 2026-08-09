@@ -11,7 +11,7 @@ load_dotenv()
 
 # approval_mode="never_require" runs the tool without asking. Use
 # "always_require" in production for tools that write data or spend money.
-@tool(approval_mode="never_require")
+@tool(approval_mode="always_require")
 def get_weather(
     location: Annotated[str, Field(description="The location to get the weather for.")],
 ) -> str:
