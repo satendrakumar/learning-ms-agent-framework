@@ -13,5 +13,7 @@ wheels/
 
 # Local session stores written by the examples
 .sessions/
+.checkpoints/
+.function_approvals/
 .claude
 .DS_Store

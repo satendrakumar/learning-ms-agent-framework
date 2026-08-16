@@ -11,6 +11,7 @@ examples/   01..20 runnable code (the lab, in teaching order), README.md
 exercises/  01..08 self-checking practice tasks + solutions/, README.md
 dev_ui/     one-file DevUI launcher
 agent_ui/   AG-UI protocol server + console client
+production/ recommended production deployment: Responses API host + Dockerfile
 others/     Azure Functions hosting, A2A server and client
 vllm-run.sh the local model server the lab runs against
 ```
@@ -21,6 +22,33 @@ An open-source SDK + runtime (Python & .NET) for building production AI agents
 and multi-agent workflows. It unifies **AutoGen** (simple multi-agent
 abstractions) and **Semantic Kernel** (enterprise state, telemetry, connectors),
 and adds graph-based **workflows** for reliable orchestration.
+
+## Prerequisites
+
+Set these up before the workshop so the first session isn't spent installing:
+
+- **Python 3.13+** — the project requires it (`requires-python = ">=3.13"`).
+- **[uv](https://docs.astral.sh/uv/)** — used for all installs and script runs
+  (`uv sync`, `uv run ...`). Install: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+- **Git** — to clone this repository.
+- **A model endpoint** (any one of):
+  - A machine with an **NVIDIA GPU** (~10 GB VRAM free) to run
+    `./vllm-run.sh`, which serves `Qwen/Qwen3.5-4B` locally via vLLM.
+    First run downloads ~8 GB of weights — do this on good Wi-Fi beforehand.
+  - **Docker with the NVIDIA container runtime** — the containerised variant
+    in `vllm-run.sh`.
+  - Any **OpenAI-compatible endpoint** (hosted key works too): point
+    `OPENAI_BASE_URL`, `OPENAI_MODEL`, and `OPENAI_API_KEY` at it in `.env`.
+- **Graphviz** (system package) — needed for workflow visualisation in the
+  workflow examples: `brew install graphviz` (macOS) or
+  `apt install graphviz` (Linux).
+
+Verify the setup with the offline example — it needs no model server:
+
+```bash
+uv sync
+uv run python examples/11_graph_workflow.py
+```
 
 ## Quick start
 
