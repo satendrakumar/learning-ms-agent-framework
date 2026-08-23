@@ -65,8 +65,6 @@ uv run python examples/01_hello_agent.py
 uv run python exercises/01_tool_design.py
 uv run python exercises/run_all.py --offline   # the 5 that need no model
 
-# Rebuild the slide deck:
-uv run python slides/build_deck.py
 ```
 
 `examples/README.md` is the lab walkthrough; `exercises/README.md` maps each
