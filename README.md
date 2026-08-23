@@ -27,7 +27,7 @@ and adds graph-based **workflows** for reliable orchestration.
 
 Set these up before the workshop so the first session isn't spent installing:
 
-- **Python 3.13+** — the project requires it (`requires-python = ">=3.13"`).
+- **Python 3.12+** — the project requires it (`requires-python = ">=3.12"`).
 - **[uv](https://docs.astral.sh/uv/)** — used for all installs and script runs
   (`uv sync`, `uv run ...`). Install: `curl -LsSf https://astral.sh/uv/install.sh | sh`
 - **Git** — to clone this repository.
@@ -42,6 +42,8 @@ Set these up before the workshop so the first session isn't spent installing:
 - **Graphviz** (system package) — needed for workflow visualisation in the
   workflow examples: `brew install graphviz` (macOS) or
   `apt install graphviz` (Linux).
+- **Redis**(Optional) - Redis is used for the in-memory cache.
+   # docker run -d --name redis -p 6379:6379 redis:latest
 
 Verify the setup with the offline example — it needs no model server:
 

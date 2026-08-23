@@ -34,7 +34,7 @@ def build_providers() -> list[object]:
 
     # 2. Durable semantic memory. redis is a hosted service, so this one is
     #    opt-in — everything else in this example runs offline.
-
+    #docker run -d --name redis -p 6379:6379 redis:latest
     providers.append(
         RedisContextProvider("redis_user_memory",agent_id="learning-agent",
                              redis_url = "redis://localhost:6379", index_name="context_memory_index",prefix="context_memory")
