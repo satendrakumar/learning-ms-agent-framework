@@ -11,7 +11,7 @@ examples/   01..20 runnable code (the lab, in teaching order), README.md
 exercises/  01..08 self-checking practice tasks + solutions/, README.md
 dev_ui/     one-file DevUI launcher
 agent_ui/   AG-UI protocol server + console client
-production/ recommended production deployment: Responses API host + Dockerfile
+agent_deployment/ recommended agent deployment: Responses API host + Dockerfile
 others/     Azure Functions hosting, A2A server and client
 vllm-run.sh the local model server the lab runs against
 ```

@@ -22,7 +22,7 @@ from agent_framework import (
     Default,
     WorkflowBuilder,
     WorkflowContext,
-    executor,
+    executor, WorkflowViz,
 )
 from typing_extensions import Never
 
@@ -111,6 +111,8 @@ async def fan_out_in_example() -> None:
         .add_fan_in_edges([words, chars, upper], merge)
         .build()
     )
+    workflow_viz = WorkflowViz(wf)
+    print(workflow_viz.save_png("fan_out_in_example.png"))
     print(f"   {(await wf.run('Payment API returned HTTP 500')).get_outputs()}")
 
 
