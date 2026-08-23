@@ -374,6 +374,32 @@ wheels = [
 ]
 
 [[package]]
+name = "agent-framework-hosting"
+version = "1.0.0a260730"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "agent-framework-core" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/72/5a/15bcd728f4d560b5e351ced3156c313a420678b34cbd8266c9ff28a846a5/agent_framework_hosting-1.0.0a260730.tar.gz", hash = "sha256:38f2520d740b529a8f5a74b0c398856a0fe494d71c8abebb80f8b53025945b29", size = 7529, upload-time = "2026-07-30T23:39:05.322Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bb/b7/237a29d7d22deeab101cb6639e209a65e82d69218fae448e073496ea3248/agent_framework_hosting-1.0.0a260730-py3-none-any.whl", hash = "sha256:ffd827ade397f3c2b67b69d53c983ab0107f06c40576fb262d2aa06879161566", size = 8382, upload-time = "2026-07-30T23:37:49.952Z" },
+]
+
+[[package]]
+name = "agent-framework-hosting-responses"
+version = "1.0.0a260730"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "agent-framework-core" },
+    { name = "agent-framework-hosting" },
+    { name = "openai" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b3/d5/8dec0916c531169ca4c003080b874b3c1c7c091153116e00317cefb1ddda/agent_framework_hosting_responses-1.0.0a260730.tar.gz", hash = "sha256:6a12577a99259ef1bc96967c02a996bc5fe3e0cefa417a127abffe6b9182e189", size = 12127, upload-time = "2026-07-30T23:39:08.026Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3b/64/a09bc514bfa4d683ee818a824879ecc777bc1b780858494e96e116878b8a/agent_framework_hosting_responses-1.0.0a260730-py3-none-any.whl", hash = "sha256:fe9b4ab68334d81299630c76fe00842b1615d845e1c36bf28b5d78471795ce7a", size = 12060, upload-time = "2026-07-30T23:37:53.417Z" },
+]
+
+[[package]]
 name = "agent-framework-hyperlight"
 version = "1.0.0b260709"
 source = { registry = "https://pypi.org/simple" }
@@ -1825,6 +1851,7 @@ dependencies = [
     { name = "agent-framework-a2a" },
     { name = "agent-framework-ag-ui" },
     { name = "agent-framework-devui" },
+    { name = "agent-framework-hosting-responses" },
     { name = "graphviz" },
 ]
 
@@ -1839,6 +1866,7 @@ requires-dist = [
     { name = "agent-framework-a2a", specifier = ">=1.0.0b260709" },
     { name = "agent-framework-ag-ui", specifier = ">=1.0.1" },
     { name = "agent-framework-devui", specifier = ">=1.0.0b260709" },
+    { name = "agent-framework-hosting-responses", specifier = ">=1.0.0a260730" },
     { name = "graphviz", specifier = ">=0.21" },
 ]
 

@@ -6,8 +6,22 @@ from agent_framework import Agent, tool
 from agent_framework_openai import OpenAIChatCompletionClient
 from dotenv import load_dotenv
 from pydantic import Field
+# import logging
+#
+# logging.basicConfig(level=logging.DEBUG)
 
 load_dotenv()
+
+import inspect
+
+client = OpenAIChatCompletionClient()
+
+print([
+    x for x in dir(client)
+    if "response" in x.lower()
+    or "complete" in x.lower()
+    or "chat" in x.lower()
+])
 
 # approval_mode="never_require" runs the tool without asking. Use
 # "always_require" in production for tools that write data or spend money.
@@ -23,7 +37,7 @@ def get_weather(
 async def main() -> None:
 
     agent = Agent(
-        client=OpenAIChatCompletionClient(),
+        client=client,
         name="WeatherAgent",
         instructions="You are a helpful weather agent. Use get_weather to answer.",
         tools=[get_weather],

@@ -5,7 +5,7 @@ and its own namespace in `session.state` (keyed by `source_id`), so you can stac
 several providers with different jobs:
 
   InMemoryHistoryProvider   the conversation transcript — loaded and stored
-  RedisContextProvider       durable semantic memory across sessions (optional)
+  RedisContextProvider      durable semantic memory across sessions (optional)
   InMemoryHistoryProvider   a write-only audit copy, including injected context
 
 Order matters: providers run in list order, so the audit store goes last —
@@ -28,15 +28,16 @@ def build_providers() -> list[object]:
     """Three providers, three jobs, one session."""
     # 1. The transcript. load_messages=True replays it into every run, which is
     #    what makes the conversation multi-turn.
-    transcript = InMemoryHistoryProvider(load_messages=True)
+    transcript = InMemoryHistoryProvider(source_id="in_memory", load_messages=True)
 
     providers: list[object] = [transcript]
 
-    # 2. Durable semantic memory. Mem0 is a hosted service, so this one is
+    # 2. Durable semantic memory. redis is a hosted service, so this one is
     #    opt-in — everything else in this example runs offline.
 
     providers.append(
-        RedisContextProvider("user-memory",agent_id="learning-agent")
+        RedisContextProvider("redis_user_memory",agent_id="learning-agent",
+                             redis_url = "redis://localhost:6379", index_name="context_memory_index",prefix="context_memory")
     )
 
 
@@ -45,7 +46,7 @@ def build_providers() -> list[object]:
     #    providers injected, which is exactly what you want in an audit log.
     providers.append(
         InMemoryHistoryProvider(
-            "audit",
+            "audit_memory",
             load_messages=False,
             store_context_messages=True,
         )

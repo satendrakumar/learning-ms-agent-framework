@@ -52,7 +52,7 @@ async def main() -> None:
     print(await agent.run("What's the price of a laptop?", session=session))
     print(await agent.run("compare top 4 laptop", session=session))
     print(await agent.run("find best laptop with in $200", session=session))
-
+    # trigger the SummarizationStrategy
     print(await agent.run("what are tips to keep laptop better", session=session))
 
 
